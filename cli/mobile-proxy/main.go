@@ -6,10 +6,11 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"net/url"
 	"sync"
 
 	_ "net/http/pprof"
+
+	"github.com/porty/mobile-proxy"
 )
 
 func main() {
@@ -34,7 +35,7 @@ func httpHandler() http.Handler {
 		if r.Method == http.MethodConnect {
 			connect(w, r)
 		} else if r.Method == http.MethodGet {
-			get(w, r)
+			mobileproxy.get(w, r)
 			log.Print(r.RequestURI)
 			log.Printf("%#v", *r)
 		} else {
@@ -89,34 +90,4 @@ func pipe(a, b io.ReadWriter) {
 		wg.Done()
 	}()
 	wg.Wait()
-}
-
-func get(w http.ResponseWriter, r *http.Request) {
-	u, err := url.Parse(r.RequestURI)
-	if err != nil {
-		http.Error(w, "Bad URL", 400)
-		return
-	}
-	newReq := http.Request{
-		Method: r.Method,
-		URL:    u,
-		Header: r.Header,
-		Close:  r.Close,
-	}
-	c := http.Client{}
-	srvResp, err := c.Do(&newReq)
-	if err != nil {
-		http.Error(w, "Proxy failed with backend request: "+err.Error(), http.StatusBadGateway)
-		return
-	}
-	defer srvResp.Body.Close()
-	for k, vs := range srvResp.Header {
-		if k != "Content-Encoding" && k != "Transfer-Encoding" {
-			for _, v := range vs {
-				w.Header().Add(k, v)
-			}
-		}
-	}
-	w.WriteHeader(srvResp.StatusCode)
-	io.Copy(w, srvResp.Body)
 }
