@@ -26,10 +26,8 @@ func Get(w http.ResponseWriter, r *http.Request) {
 	}
 	defer srvResp.Body.Close()
 	for k, vs := range srvResp.Header {
-		if k != "Content-Encoding" && k != "Transfer-Encoding" {
-			for _, v := range vs {
-				w.Header().Add(k, v)
-			}
+		for _, v := range vs {
+			w.Header().Add(k, v)
 		}
 	}
 	w.Header().Add("X-Rob-Proxy", "0.1")
