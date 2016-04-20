@@ -6,7 +6,7 @@ import (
 	"net/url"
 )
 
-func Get(w http.ResponseWriter, r *http.Request) {
+func get(w http.ResponseWriter, r *http.Request) {
 	u, err := url.Parse(r.RequestURI)
 	if err != nil {
 		http.Error(w, "Bad URL", 400)

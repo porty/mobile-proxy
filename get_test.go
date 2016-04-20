@@ -16,7 +16,7 @@ func expectEqualsStr(t *testing.T, actual string, expected string, message strin
 }
 
 func getProxy() *httptest.Server {
-	return httptest.NewServer(http.HandlerFunc(Get))
+	return httptest.NewServer(ProxyHandler())
 }
 
 func getClient(proxy *url.URL) *http.Client {
