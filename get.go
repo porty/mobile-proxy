@@ -1,9 +1,11 @@
 package mobileproxy
 
 import (
+	"compress/gzip"
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 func get(w http.ResponseWriter, r *http.Request) {
@@ -31,6 +33,42 @@ func get(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	w.Header().Add("X-Rob-Proxy", "0.1")
-	w.WriteHeader(srvResp.StatusCode)
-	io.Copy(w, srvResp.Body)
+
+	if clientCanGzip(r) && !responseAlreadyEncoded(srvResp) && isWorthGzipping(srvResp) {
+		w.Header().Set("Content-encoding", "gzip")
+		w.WriteHeader(srvResp.StatusCode)
+		gw := gzip.NewWriter(w)
+		io.Copy(gw, srvResp.Body)
+		gw.Close()
+	} else {
+		w.WriteHeader(srvResp.StatusCode)
+		io.Copy(w, srvResp.Body)
+	}
+}
+
+func clientCanGzip(req *http.Request) bool {
+	return strings.Contains(req.Header.Get("Accept-encoding"), "gzip")
+}
+
+func responseAlreadyEncoded(resp *http.Response) bool {
+	ce := resp.Header.Get("Content-encoding")
+	if ce != "" {
+		return true
+	}
+	return resp.Header.Get("Transfer-encoding") != ""
+}
+
+var compressedMimeTypes = map[string]bool{
+	"image/jpeg": true,
+	"image/png":  true,
+	"image/gif":  true,
+	"video/mp4":  true,
+}
+
+func isWorthGzipping(resp *http.Response) bool {
+	if resp.ContentLength < 1024 {
+		return false
+	}
+	alreadyCompressed := compressedMimeTypes[resp.Header.Get("Content-type")]
+	return !alreadyCompressed
 }
