@@ -3,13 +3,50 @@ package mobileproxy
 import (
 	"compress/gzip"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"strings"
 )
 
-func post(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
+func clientCanGzip(req *http.Request) bool {
+	return strings.Contains(req.Header.Get("Accept-encoding"), "gzip")
+}
+
+func responseAlreadyEncoded(resp *http.Response) bool {
+	ce := resp.Header.Get("Content-encoding")
+	if ce != "" {
+		return true
+	}
+	return resp.Header.Get("Transfer-encoding") != ""
+}
+
+var compressedMimeTypes = map[string]bool{
+	"image/jpeg": true,
+	"image/png":  true,
+	"image/gif":  true,
+	"video/mp4":  true,
+}
+
+func isWorthGzipping(resp *http.Response) bool {
+	if resp.ContentLength < 1024 {
+		return false
+	}
+
+	if resp.Header.Get("Content-type") == "" {
+		// putting content-type: gzip on something without a content-type doesn't work right
+		return false
+	}
+
+	alreadyCompressed := compressedMimeTypes[resp.Header.Get("Content-type")]
+	return !alreadyCompressed
+}
+
+func do(w http.ResponseWriter, r *http.Request) {
+	if r.Body != nil {
+		defer r.Body.Close()
+	}
 	u, err := url.Parse(r.RequestURI)
 	if err != nil {
 		http.Error(w, "Bad URL", 400)
@@ -52,4 +89,10 @@ func post(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(srvResp.StatusCode)
 		io.Copy(w, srvResp.Body)
 	}
+}
+
+func unknownMethodHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Not sure how to do a %s request for %s", r.Method, r.URL.String())
+
+	http.Error(w, "Unknown request method: "+r.Method, http.StatusBadRequest)
 }

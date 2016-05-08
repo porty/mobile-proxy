@@ -1,18 +1,16 @@
 package mobileproxy
 
-import (
-	"log"
-	"net/http"
-)
+import "net/http"
 
 func ProxyHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodConnect {
+		switch r.Method {
+		case http.MethodConnect:
 			connect(w, r)
-		} else if r.Method == http.MethodGet {
-			get(w, r)
-		} else {
-			log.Print("I don't know how to handle this")
+		case http.MethodDelete, http.MethodGet, http.MethodHead, http.MethodOptions, http.MethodPatch, http.MethodPost, http.MethodPut:
+			do(w, r)
+		default:
+			unknownMethodHandler(w, r)
 		}
 	})
 }
