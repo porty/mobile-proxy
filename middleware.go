@@ -29,12 +29,12 @@ func AuthorisationHandler(next http.Handler, users map[string]string) http.Handl
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		v := r.Header.Get("Proxy-authorization")
-		//Proxy-Authorization:[Basic cm9mbDpjb3B0ZXI=]
 		if v == "" {
 			log.Print("Failed to find proxy-authorization header")
 			fail(w)
 			return
 		}
+		r.Header.Del("Proxy-authorization")
 		parts := strings.Split(v, " ")
 		if len(parts) != 2 {
 			log.Print("Failed to split proxy-authorization in to 2 parts")
