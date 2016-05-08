@@ -9,6 +9,10 @@ import (
 	"github.com/porty/mobile-proxy"
 )
 
+var users = map[string]string{
+	"user": "password",
+}
+
 func main() {
 	go func() {
 		// for pprof
@@ -17,9 +21,12 @@ func main() {
 
 	log.Print("Listening on http://localhost:8081/debug/ for pprof")
 	log.Print("Listening on http://localhost:8080/ for proxy")
+	handler := mobileproxy.ProxyHandler()
+	handler = mobileproxy.AuthorisationHandler(handler, users)
+	handler = mobileproxy.LogHandler(handler)
 	err := http.ListenAndServe(
 		":8080",
-		mobileproxy.LogHandler(mobileproxy.ProxyHandler()),
+		handler,
 	)
 	if err != nil {
 		panic(err)
