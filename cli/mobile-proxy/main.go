@@ -22,8 +22,8 @@ func main() {
 	log.Print("Listening on http://localhost:8081/debug/ for pprof")
 	log.Print("Listening on http://localhost:8080/ for proxy")
 	handler := mobileproxy.ProxyHandler()
-	handler = mobileproxy.AuthorisationHandler(handler, users)
-	handler = mobileproxy.LogHandler(handler)
+	handler = mobileproxy.AuthorisationMiddleware(handler, users)
+	handler = mobileproxy.LogMiddleware(handler)
 	err := http.ListenAndServe(
 		":8080",
 		handler,

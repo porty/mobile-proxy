@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func LogHandler(next http.Handler) http.Handler {
+func LogMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		log.Printf("Start %s %s", r.Method, r.RequestURI)
@@ -19,7 +19,7 @@ func LogHandler(next http.Handler) http.Handler {
 	})
 }
 
-func AuthorisationHandler(next http.Handler, users map[string]string) http.Handler {
+func AuthorisationMiddleware(next http.Handler, users map[string]string) http.Handler {
 
 	fail := func(w http.ResponseWriter) {
 		w.Header().Set("Proxy-Authenticate", "basic realm=\"Shorty Mobile Proxy\"")
