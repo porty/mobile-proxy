@@ -4,6 +4,7 @@ import (
 	"compress/gzip"
 	"io"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"strings"
 )
@@ -35,11 +36,17 @@ func get(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("X-Rob-Proxy", "0.1")
 
 	if clientCanGzip(r) && !responseAlreadyEncoded(srvResp) && isWorthGzipping(srvResp) {
+		// gzip the content
+		// seeing we don't know the output gzip length, we have to chunk it and throw away any existing content-length header
 		w.Header().Set("Content-encoding", "gzip")
+		w.Header().Set("Transfer-encoding", "chunked")
+		w.Header().Del("Content-length")
 		w.WriteHeader(srvResp.StatusCode)
-		gw := gzip.NewWriter(w)
+		cw := httputil.NewChunkedWriter(w)
+		gw := gzip.NewWriter(cw)
 		io.Copy(gw, srvResp.Body)
 		gw.Close()
+		cw.Close()
 	} else {
 		w.WriteHeader(srvResp.StatusCode)
 		io.Copy(w, srvResp.Body)
@@ -69,6 +76,12 @@ func isWorthGzipping(resp *http.Response) bool {
 	if resp.ContentLength < 1024 {
 		return false
 	}
+
+	if resp.Header.Get("Content-type") == "" {
+		// putting content-type: gzip on something without a content-type doesn't work right
+		return false
+	}
+
 	alreadyCompressed := compressedMimeTypes[resp.Header.Get("Content-type")]
 	return !alreadyCompressed
 }
