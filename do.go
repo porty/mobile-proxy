@@ -19,7 +19,7 @@ func responseAlreadyEncoded(resp *http.Response) bool {
 	if ce != "" {
 		return true
 	}
-	return resp.Header.Get("Transfer-encoding") != ""
+	return len(resp.TransferEncoding) > 0
 }
 
 var compressedMimeTypes = map[string]bool{
